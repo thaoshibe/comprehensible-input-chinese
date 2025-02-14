@@ -102,7 +102,7 @@
 
         async function loadData() {
             try {
-                const response = await fetch('words_with_examples.json');
+                const response = await fetch('./words_with_examples.json');
                 if (!response.ok) {
                     throw new Error('Failed to load data');
                 }
