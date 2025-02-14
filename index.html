@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immersive Chinese Reading</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        .sentence-card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 600px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .sentence-card:hover {
+            transform: translateY(-5px);
+        }
+        .sentence {
+            font-size: 1.5em;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        .pinyin {
+            font-size: 1.2em;
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+        .translation {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        .details {
+            font-size: 0.9em;
+            color: #555;
+            white-space: pre-line;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .pagination button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .pagination button:hover:not(:disabled) {
+            background-color: #3498db;
+        }
+        .page-info {
+            display: flex;
+            align-items: center;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Immersive Chinese Reading</h1>
+    <div id="content"></div>
+    <div class="pagination">
+        <button id="prevBtn" onclick="previousPage()" disabled>Previous</button>
+        <div class="page-info">Page <span id="currentPage">1</span></div>
+        <button id="nextBtn" onclick="nextPage()">Next</button>
+    </div>
+
+    <script>
+        let allData = [];
+        let currentPage = 1;
+        const itemsPerPage = 50;
+        const contentDiv = document.getElementById('content');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const currentPageSpan = document.getElementById('currentPage');
+
+        async function loadData() {
+            try {
+                const response = await fetch('words_with_examples.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load data');
+                }
+                allData = await response.json();
+                displayCurrentPage();
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="loading">Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        function displayCurrentPage() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const currentData = allData.slice(startIndex, endIndex);
+
+            contentDiv.innerHTML = '';
+            
+            currentData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'sentence-card';
+                card.innerHTML = `
+                    <div class="sentence">${item.sentences}</div>
+                    <div class="pinyin">${item.pinyin}</div>
+                    <div class="translation">${item.translation}</div>
+                    ${item.meanings ? `<div class="details">${item.meanings}</div>` : ''}
+                `;
+                contentDiv.appendChild(card);
+            });
+
+            updatePaginationControls();
+        }
+
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(allData.length / itemsPerPage);
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            currentPageSpan.textContent = currentPage;
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayCurrentPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(allData.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayCurrentPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Initial load
+        loadData();
+    </script>
+</body>
+</html>
