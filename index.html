@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Immersive Chinese Reading</title>
     <style>
+        /* Previous styles remain the same */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
@@ -48,11 +49,32 @@
             color: #555;
             white-space: pre-line;
         }
+        
+        /* New and modified styles */
+        .progress-bar {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 20px;
+            background-color: #27ae60;
+            transition: width 0.3s ease;
+        }
+        .progress-stats {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+        }
         .pagination {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin: 20px 0;
+            flex-wrap: wrap;
         }
         .pagination button {
             padding: 8px 16px;
@@ -63,6 +85,9 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
+        .pagination button.active {
+            background-color: #27ae60;
+        }
         .pagination button:disabled {
             background-color: #bdc3c7;
             cursor: not-allowed;
@@ -70,35 +95,80 @@
         .pagination button:hover:not(:disabled) {
             background-color: #3498db;
         }
-        .page-info {
+        .page-input {
             display: flex;
             align-items: center;
-            color: #666;
+            gap: 10px;
+            margin: 10px 0;
+            justify-content: center;
         }
-        .loading {
-            text-align: center;
-            color: #666;
-            padding: 20px;
+        .page-input input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .reading-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .reading-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
         }
     </style>
 </head>
 <body>
     <h1>Immersive Chinese Reading</h1>
+    <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div id="progressStats" class="progress-stats"></div>
     <div id="content"></div>
     <div class="pagination">
         <button id="prevBtn" onclick="previousPage()" disabled>Previous</button>
-        <div class="page-info">Page <span id="currentPage">1</span></div>
+        <div id="pageButtons"></div>
         <button id="nextBtn" onclick="nextPage()">Next</button>
+    </div>
+    <div class="page-input">
+        <label>Go to page:</label>
+        <input type="number" id="pageInput" min="1" value="1">
+        <button onclick="goToPage()">Go</button>
     </div>
 
     <script>
         let allData = [];
         let currentPage = 1;
+        let readItems = new Set();
         const itemsPerPage = 50;
         const contentDiv = document.getElementById('content');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
-        const currentPageSpan = document.getElementById('currentPage');
+        const pageButtons = document.getElementById('pageButtons');
+        const progressFill = document.getElementById('progressFill');
+        const progressStats = document.getElementById('progressStats');
+
+        // Load reading progress from localStorage
+        function loadProgress() {
+            const savedProgress = localStorage.getItem('readingProgress');
+            if (savedProgress) {
+                readItems = new Set(JSON.parse(savedProgress));
+            }
+        }
+
+        // Save reading progress to localStorage
+        function saveProgress() {
+            localStorage.setItem('readingProgress', JSON.stringify([...readItems]));
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            const percentage = (readItems.size / allData.length) * 100;
+            progressFill.style.width = `${percentage}%`;
+            progressStats.textContent = `Read ${readItems.size} out of ${allData.length} items (${percentage.toFixed(1)}%)`;
+        }
 
         async function loadData() {
             try {
@@ -107,7 +177,9 @@
                     throw new Error('Failed to load data');
                 }
                 allData = await response.json();
+                loadProgress();
                 displayCurrentPage();
+                updateProgressBar();
             } catch (error) {
                 contentDiv.innerHTML = `<div class="loading">Error loading data: ${error.message}</div>`;
             }
@@ -120,14 +192,21 @@
 
             contentDiv.innerHTML = '';
             
-            currentData.forEach(item => {
+            currentData.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'sentence-card';
+                const absoluteIndex = startIndex + index;
                 card.innerHTML = `
                     <div class="sentence">${item.sentences}</div>
                     <div class="pinyin">${item.pinyin}</div>
                     <div class="translation">${item.translation}</div>
                     ${item.meanings ? `<div class="details">${item.meanings}</div>` : ''}
+                    <div class="reading-checkbox">
+                        <input type="checkbox" id="read-${absoluteIndex}" 
+                            ${readItems.has(absoluteIndex) ? 'checked' : ''}
+                            onchange="toggleRead(${absoluteIndex})">
+                        <label for="read-${absoluteIndex}">Mark as read</label>
+                    </div>
                 `;
                 contentDiv.appendChild(card);
             });
@@ -135,11 +214,52 @@
             updatePaginationControls();
         }
 
+        function toggleRead(index) {
+            if (readItems.has(index)) {
+                readItems.delete(index);
+            } else {
+                readItems.add(index);
+            }
+            saveProgress();
+        }
+
         function updatePaginationControls() {
             const totalPages = Math.ceil(allData.length / itemsPerPage);
             prevBtn.disabled = currentPage === 1;
             nextBtn.disabled = currentPage === totalPages;
-            currentPageSpan.textContent = currentPage;
+
+            // Update page buttons
+            pageButtons.innerHTML = '';
+            
+            // Add page buttons with ellipsis for large numbers of pages
+            const createPageButton = (pageNum) => {
+                const button = document.createElement('button');
+                button.textContent = pageNum;
+                button.onclick = () => goToSpecificPage(pageNum);
+                if (pageNum === currentPage) button.classList.add('active');
+                return button;
+            };
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (
+                    i === 1 || 
+                    i === totalPages || 
+                    (i >= currentPage - 2 && i <= currentPage + 2)
+                ) {
+                    pageButtons.appendChild(createPageButton(i));
+                } else if (
+                    i === currentPage - 3 || 
+                    i === currentPage + 3
+                ) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.margin = '0 10px';
+                    pageButtons.appendChild(ellipsis);
+                }
+            }
+
+            // Update page input
+            document.getElementById('pageInput').max = totalPages;
         }
 
         function previousPage() {
@@ -156,6 +276,24 @@
                 currentPage++;
                 displayCurrentPage();
                 window.scrollTo(0, 0);
+            }
+        }
+
+        function goToSpecificPage(page) {
+            currentPage = page;
+            displayCurrentPage();
+            window.scrollTo(0, 0);
+        }
+
+        function goToPage() {
+            const pageInput = document.getElementById('pageInput');
+            const page = parseInt(pageInput.value);
+            const totalPages = Math.ceil(allData.length / itemsPerPage);
+            
+            if (page >= 1 && page <= totalPages) {
+                goToSpecificPage(page);
+            } else {
+                alert(`Please enter a page number between 1 and ${totalPages}`);
             }
         }
 
