@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="./peach.png" type="image/png">
-    <title>Comprehensible Input Chinese Reading</title>
+    <title>Comprehensible Input in Chinese</title>
     <style>
         /* Previous styles remain exactly the same */
         body {
@@ -137,7 +137,7 @@
     </style>
 </head>
 <body>
-    <h1>📝 Comprehensible Input Chinese Reading 🇨🇳</h1>
+    <h1>📝 Comprehensible Input in Chinese 🇨🇳</h1>
     <div class="progress-bar">
         <div id="progressFill" class="progress-fill"></div>
     </div>
@@ -214,7 +214,7 @@
 
         async function loadData() {
             try {
-                const response = await fetch('./words_with_examples2.json');
+                const response = await fetch('./words_with_examples.json');
                 if (!response.ok) {
                     throw new Error('Failed to load data');
                 }
@@ -370,8 +370,17 @@
 // Rest of your existing JavaScript remains unchanged except these two functions replace the old ones.
 
 // loadData();
-
         loadData();
     </script>
+    <hr>
+    <center>
+        祝你学好汉语~
+        <br>
+        2025 © <a href="https://thaoshibe.github.io/">Thao Nguyen ✨</a>; Source Code: <a href="https://github.com/thaoshibe/hanzi-with-examples">this github</a>
+    </center>
+<div style="display: none;">
+    <a href="https://clustrmaps.com/site/1c4dq"  title="ClustrMaps"><img src="//www.clustrmaps.com/map_v2.png?d=8vQD-WdlHsE29Gk54pdoGNUiDcbg-TzqdBTii0D4gbo&cl=ffffff" /></a>
+
+</div>
 </body>
 </html>
