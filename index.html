@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Immersive Chinese Reading</title>
+    <link rel="icon" href="./peach.png" type="image/png">
+    <title>Comprehensible Input Chinese Reading</title>
     <style>
-        /* Previous styles remain the same */
+        /* Previous styles remain exactly the same */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
@@ -25,10 +26,16 @@
             max-width: 600px;
             background-color: #fff;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+            position: relative;
         }
         .sentence-card:hover {
             transform: translateY(-5px);
+            background-color: #f8f9fa;
+        }
+        .sentence-card.read {
+            background-color: #D3D3D3;
         }
         .sentence {
             font-size: 1.5em;
@@ -37,20 +44,19 @@
         }
         .pinyin {
             font-size: 1.2em;
-            color: #2980b9;
+            color: #fff;
             margin-bottom: 10px;
         }
         .translation {
             font-size: 1.1em;
             margin-bottom: 15px;
+            color: #fff;
         }
         .details {
             font-size: 0.9em;
             color: #555;
             white-space: pre-line;
         }
-        
-        /* New and modified styles */
         .progress-bar {
             width: 100%;
             max-width: 600px;
@@ -109,23 +115,35 @@
             border-radius: 5px;
         }
         .reading-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-top: 10px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
-        .reading-checkbox input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+        /* New style for the find unread button */
+        .find-unread-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .find-unread-btn:hover {
+            background-color: #c0392b;
         }
     </style>
 </head>
 <body>
-    <h1>Immersive Chinese Reading</h1>
+    <h1>📝 Comprehensible Input Chinese Reading 🇨🇳</h1>
     <div class="progress-bar">
         <div id="progressFill" class="progress-fill"></div>
     </div>
     <div id="progressStats" class="progress-stats"></div>
+    <!-- Add the new button -->
+    <button class="find-unread-btn" onclick="findFirstUnread()">Find Next Unread</button>
     <div id="content"></div>
     <div class="pagination">
         <button id="prevBtn" onclick="previousPage()" disabled>Previous</button>
@@ -150,7 +168,32 @@
         const progressFill = document.getElementById('progressFill');
         const progressStats = document.getElementById('progressStats');
 
-        // Load reading progress from localStorage
+        // Add the new function to find first unread item
+        function findFirstUnread() {
+            // Find the first index that's not in readItems
+            let firstUnreadIndex = 0;
+            while (firstUnreadIndex < allData.length && readItems.has(firstUnreadIndex)) {
+                firstUnreadIndex++;
+            }
+
+            // If we found an unread item
+            if (firstUnreadIndex < allData.length) {
+                // Calculate which page this item is on
+                const targetPage = Math.floor(firstUnreadIndex / itemsPerPage) + 1;
+                // Go to that page
+                goToSpecificPage(targetPage);
+                // Scroll to the specific item after a short delay to ensure the page has rendered
+                setTimeout(() => {
+                    const targetElement = document.getElementById(`read-${firstUnreadIndex}`);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            } else {
+                alert('All items have been read!');
+            }
+        }
+
         function loadProgress() {
             const savedProgress = localStorage.getItem('readingProgress');
             if (savedProgress) {
@@ -158,7 +201,6 @@
             }
         }
 
-        // Save reading progress to localStorage
         function saveProgress() {
             localStorage.setItem('readingProgress', JSON.stringify([...readItems]));
             updateProgressBar();
@@ -196,6 +238,11 @@
                 const card = document.createElement('div');
                 card.className = 'sentence-card';
                 const absoluteIndex = startIndex + index;
+                
+                if (readItems.has(absoluteIndex)) {
+                    card.classList.add('read');
+                }
+                
                 card.innerHTML = `
                     <div class="sentence">${item.sentences}</div>
                     <div class="pinyin">${item.pinyin}</div>
@@ -203,11 +250,24 @@
                     ${item.meanings ? `<div class="details">${item.meanings}</div>` : ''}
                     <div class="reading-checkbox">
                         <input type="checkbox" id="read-${absoluteIndex}" 
-                            ${readItems.has(absoluteIndex) ? 'checked' : ''}
-                            onchange="toggleRead(${absoluteIndex})">
-                        <label for="read-${absoluteIndex}">Mark as read</label>
+                            ${readItems.has(absoluteIndex) ? 'checked' : ''}>
                     </div>
                 `;
+                
+                card.addEventListener('click', (e) => {
+                    if (!e.target.matches('input[type="checkbox"]')) {
+                        const checkbox = card.querySelector(`#read-${absoluteIndex}`);
+                        checkbox.checked = !checkbox.checked;
+                        toggleRead(absoluteIndex);
+                        card.classList.toggle('read');
+                    }
+                });
+                
+                card.querySelector(`#read-${absoluteIndex}`).addEventListener('change', (e) => {
+                    toggleRead(absoluteIndex);
+                    card.classList.toggle('read');
+                });
+                
                 contentDiv.appendChild(card);
             });
 
@@ -228,10 +288,8 @@
             prevBtn.disabled = currentPage === 1;
             nextBtn.disabled = currentPage === totalPages;
 
-            // Update page buttons
             pageButtons.innerHTML = '';
             
-            // Add page buttons with ellipsis for large numbers of pages
             const createPageButton = (pageNum) => {
                 const button = document.createElement('button');
                 button.textContent = pageNum;
@@ -258,7 +316,6 @@
                 }
             }
 
-            // Update page input
             document.getElementById('pageInput').max = totalPages;
         }
 
@@ -296,8 +353,24 @@
                 alert(`Please enter a page number between 1 and ${totalPages}`);
             }
         }
+        function loadProgress() {
+            const hostname = window.location.hostname;
+            const savedProgress = localStorage.getItem(`${hostname}_readingProgress`);
+            if (savedProgress) {
+                readItems = new Set(JSON.parse(savedProgress));
+            }
+        }
 
-        // Initial load
+        function saveProgress() {
+            const hostname = window.location.hostname;
+            localStorage.setItem(`${hostname}_readingProgress`, JSON.stringify([...readItems]));
+            updateProgressBar();
+        }
+
+// Rest of your existing JavaScript remains unchanged except these two functions replace the old ones.
+
+// loadData();
+
         loadData();
     </script>
 </body>
