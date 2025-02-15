@@ -1,4 +1,4 @@
-# Immersive Chinese Reading
+# 📝 Comprehensible Input for Chinese 🇨🇳
 
 <img src="./screenshot.png" width="600px" />
 
